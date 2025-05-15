@@ -39,7 +39,6 @@ pico_enable_stdio_usb(smart_light 1)
 target_link_libraries(smart_light
         pico_stdlib
         hardware_gpio
-        hardware_adc
         pico_cyw43_arch_lwip_threadsafe_background)
 
 # Add the standard include files to the build

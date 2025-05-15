@@ -2,17 +2,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-
+#include "pico/bootrom.h"
 #include "pico/stdlib.h"
-#include "hardware/adc.h"
 #include "pico/cyw43_arch.h"
 #include "hardware/pio.h"
-#include "hardware/clocks.h"
-
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
 #include "lwip/netif.h"
-
 #include "ws2812.pio.h"  // Inclui o arquivo PIO para controle dos LEDs WS2812
 
 // Credenciais WIFI - Substitua com suas credenciais
@@ -20,9 +16,9 @@
 #define WIFI_PASSWORD "Ph01felix!"
 
 // Definição dos pinos
-#define LED_PIN CYW43_WL_GPIO_LED_PIN   // LED onboard
 #define WS2812_PIN 7                    // Pino da matriz de LEDs
 #define NUM_PIXELS 25                   // Número de LEDs na matriz (5x5)
+#define BTN_B 6                         // Botão para o BOOTSEL
 
 // Modos de iluminação
 #define MODE_OFF 0
@@ -75,7 +71,6 @@ uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b);
 void put_pixel(uint32_t pixel_grb);
 void set_all_pixels(uint8_t r, uint8_t g, uint8_t b);
 void update_party_mode();
-const char* get_preview_color(); // Adicionado o protótipo da função aqui
 
 // Inicializa o PIO para controle dos LEDs WS2812
 void init_ws2812() {
@@ -119,31 +114,6 @@ void update_party_mode() {
         const uint8_t *color = party_colors[lamp_state.party_color_index];
         set_all_pixels(color[0], color[1], color[2]);
     }
-}
-
-// Função auxiliar para obter a cor de prévia com base no modo atual
-const char* get_preview_color() {
-    static char color_str[20];
-    
-    switch (lamp_state.mode) {
-        case MODE_COLD:
-            strcpy(color_str, "#6495ED"); // Azulado
-            break;
-        case MODE_WARM:
-            strcpy(color_str, "#FF8C00"); // Alaranjado
-            break;
-        case MODE_YELLOW:
-            strcpy(color_str, "#FFD700"); // Amarelo
-            break;
-        case MODE_PARTY:
-            strcpy(color_str, "#FF1493"); // Rosa (representando o modo festa)
-            break;
-        default:
-            strcpy(color_str, "#FFFFFF"); // Branco
-            break;
-    }
-    
-    return color_str;
 }
 
 // Atualiza o estado da lâmpada com base no modo atual
@@ -296,11 +266,11 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
         "</div>"
         "</body>"
         "</html>",
-        bg_color,                                                // Cor de fundo baseada no modo
-        lamp_state.is_on ? "on" : "off",                         // Classe do botão
-        lamp_state.is_on ? "DESLIGAR" : "LIGAR",                 // Texto do botão
-        cold_checked, warm_checked, yellow_checked, party_checked, // Estado dos botões de modo
-        lamp_state.brightness, lamp_state.brightness              // Valor do brilho
+        bg_color,                                                   // Cor de fundo baseada no modo
+        lamp_state.is_on ? "on" : "off",                            // Classe do botão
+        lamp_state.is_on ? "DESLIGAR" : "LIGAR",                    // Texto do botão
+        cold_checked, warm_checked, yellow_checked, party_checked,  // Estado dos botões de modo
+        lamp_state.brightness, lamp_state.brightness                // Valor do brilho
     );
 
     // Envia a resposta
@@ -314,9 +284,7 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
     return ERR_OK;
 }
 
-// Trecho para modo BOOTSEL com botão B
-#include "pico/bootrom.h"
-#define botaoB 6
+
 void gpio_irq_handler(uint gpio, uint32_t events)
 {
   reset_usb_boot(0, 0);
@@ -325,14 +293,15 @@ void gpio_irq_handler(uint gpio, uint32_t events)
 int main()
 {
     // Para ser utilizado o modo BOOTSEL com botão B
-    gpio_init(botaoB);
-    gpio_set_dir(botaoB, GPIO_IN);
-    gpio_pull_up(botaoB);
-    gpio_set_irq_enabled_with_callback(botaoB, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler);
-    // Aqui termina o trecho para modo BOOTSEL com botão B
+    gpio_init(BTN_B);
+    gpio_set_dir(BTN_B, GPIO_IN);
+    gpio_pull_up(BTN_B);
+    gpio_set_irq_enabled_with_callback(BTN_B, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler);
+    
 
     stdio_init_all();
     printf("Iniciando Smart Lamp Controller...\n");
+    sleep_ms(5000); // Delay para acessar o terminal e ver o endereço
 
     // Inicializa o PIO para WS2812
     init_ws2812();
