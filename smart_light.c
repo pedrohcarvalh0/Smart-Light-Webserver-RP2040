@@ -69,7 +69,7 @@ void update_lamp();
 void init_ws2812();
 uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b);
 void put_pixel(uint32_t pixel_grb);
-void set_all_pixels(uint8_t r, uint8_t g, uint8_t b);
+void set_all_leds_matriz(uint8_t r, uint8_t g, uint8_t b);
 void update_party_mode();
 
 // Inicializa o PIO para controle dos LEDs WS2812
@@ -88,8 +88,8 @@ void put_pixel(uint32_t pixel_grb) {
     pio_sm_put_blocking(pio, sm, pixel_grb << 8u);
 }
 
-// Define a cor de todos os pixels da matriz
-void set_all_pixels(uint8_t r, uint8_t g, uint8_t b) {
+// Define a cor de todos os LEDs da matriz
+void set_all_leds_matriz(uint8_t r, uint8_t g, uint8_t b) {
     // Ajusta o brilho
     float brightness_factor = lamp_state.brightness / 100.0f;
     uint8_t r_adj = (uint8_t)(r * brightness_factor);
@@ -112,32 +112,32 @@ void update_party_mode() {
         lamp_state.last_party_update = current_time;
         
         const uint8_t *color = party_colors[lamp_state.party_color_index];
-        set_all_pixels(color[0], color[1], color[2]);
+        set_all_leds_matriz(color[0], color[1], color[2]);
     }
 }
 
 // Atualiza o estado da lâmpada com base no modo atual
 void update_lamp() {
     if (!lamp_state.is_on) {
-        set_all_pixels(0, 0, 0);
+        set_all_leds_matriz(0, 0, 0);
         return;
     }
     
     switch (lamp_state.mode) {
         case MODE_COLD:
-            set_all_pixels(100, 100, 255); // Luz fria (azulada)
+            set_all_leds_matriz(100, 100, 255); // Luz fria (azulada)
             break;
         case MODE_WARM:
-            set_all_pixels(255, 140, 20);  // Luz quente (alaranjada)
+            set_all_leds_matriz(255, 140, 20);  // Luz quente (alaranjada)
             break;
         case MODE_YELLOW:
-            set_all_pixels(255, 255, 0);   // Luz amarela intensa
+            set_all_leds_matriz(255, 255, 0);   // Luz amarela intensa
             break;
         case MODE_PARTY:
             // O modo festa é atualizado no loop principal
             break;
         default:
-            set_all_pixels(0, 0, 0);
+            set_all_leds_matriz(0, 0, 0);
             break;
     }
 }
@@ -347,7 +347,7 @@ int main()
     printf("Servidor web iniciado na porta 80\n");
 
     // Apaga todos os LEDs no início
-    set_all_pixels(0, 0, 0);
+    set_all_leds_matriz(0, 0, 0);
 
     // Loop principal
     while (true) {
